@@ -5,379 +5,533 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Practice Tracker</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a2e">
+    <meta name="theme-color" content="#0C0D10">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Practice">
     <link rel="apple-touch-icon" href="icon.svg">
     <style>
         :root {
-            --bg: #1a1a2e;
-            --surface: #16213e;
-            --text: #e2e8f0;
-            --text-muted: #94a3b8;
-            --piano: #6C63FF;
-            --marimba: #FF6B6B;
-            --drumset: #4ECDC4;
-            --snare: #FFE66D;
-            --radius: 12px;
+            --bg:     #0C0D10;
+            --s1:     #15171C;
+            --s2:     #1D1F28;
+            --border: rgba(255,255,255,0.07);
+            --text:   #F0F1F5;
+            --muted:  #8B8FA8;
+            --faint:  #3D4058;
+
+            --piano:   #7B8CDE;
+            --marimba: #E8A838;
+            --drumset: #E05C7A;
+            --snare:   #3EC4C4;
+
+            --r:    16px;
+            --r-sm: 10px;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
+            min-height: 100dvh;
             max-width: 480px;
             margin: 0 auto;
+            overflow-x: hidden;
         }
 
-        header {
-            padding: 16px 20px 12px;
-            background: var(--surface);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.3px; }
-        header p { font-size: 0.78rem; color: var(--text-muted); margin-top: 1px; }
-
-        .tabs {
-            display: flex;
-            background: var(--surface);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            position: sticky;
-            top: 57px;
-            z-index: 9;
-        }
-
-        .tab {
-            flex: 1;
-            padding: 12px 8px;
-            text-align: center;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .tab.active { color: var(--text); border-bottom-color: var(--piano); }
-
-        .page { display: none; padding: 20px; padding-bottom: 40px; }
+        /* ── Pages ─────────────────────────────── */
+        .page { display: none; padding: 0 20px 100px; }
         .page.active { display: block; }
 
-        .section-title {
-            font-size: 0.72rem;
+        .page-header {
+            padding: max(20px, env(safe-area-inset-top)) 0 20px;
+        }
+
+        .page-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.5px; }
+        .page-sub   { font-size: 0.8rem; color: var(--muted); margin-top: 3px; min-height: 1.2em; }
+
+        /* ── Bottom Nav ─────────────────────────── */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background: rgba(12, 13, 16, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 10px 0 max(12px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.12s;
+        }
+
+        .nav-item:active { transform: scale(0.88); }
+        .nav-icon  { font-size: 1.3rem; line-height: 1; opacity: 0.35; transition: opacity 0.2s; }
+        .nav-label { font-size: 0.63rem; font-weight: 600; letter-spacing: 0.3px; opacity: 0.35; transition: opacity 0.2s; }
+        .nav-item.active .nav-icon,
+        .nav-item.active .nav-label { opacity: 1; }
+
+        /* ── Section label ──────────────────────── */
+        .section-label {
+            font-size: 0.68rem;
             font-weight: 600;
-            color: var(--text-muted);
+            letter-spacing: 0.7px;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            color: var(--muted);
             margin-bottom: 10px;
         }
 
+        /* ── Instrument Grid ────────────────────── */
         .instruments {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 28px;
         }
 
-        .instrument-btn {
-            padding: 14px 12px;
-            border-radius: var(--radius);
-            border: 2px solid rgba(255,255,255,0.06);
-            background: var(--surface);
-            color: var(--text-muted);
+        .inst-btn {
+            position: relative;
+            padding: 16px 14px;
+            border-radius: var(--r);
+            border: 1.5px solid var(--border);
+            background: var(--s1);
             cursor: pointer;
             text-align: left;
-            transition: all 0.18s;
+            overflow: hidden;
+            transition: border-color 0.18s, transform 0.1s;
         }
 
-        .instrument-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .instrument-btn .icon { font-size: 1.7rem; display: block; margin-bottom: 6px; }
-        .instrument-btn .name { font-size: 0.82rem; font-weight: 600; display: block; color: var(--text); }
+        .inst-btn:active { transform: scale(0.96); }
+        .inst-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-        .instrument-btn[data-id="piano"].selected   { background: rgba(108,99,255,0.18); border-color: var(--piano);   color: var(--piano); }
-        .instrument-btn[data-id="marimba"].selected { background: rgba(255,107,107,0.18); border-color: var(--marimba); color: var(--marimba); }
-        .instrument-btn[data-id="drumset"].selected { background: rgba(78,205,196,0.18); border-color: var(--drumset); color: var(--drumset); }
-        .instrument-btn[data-id="snare"].selected   { background: rgba(255,230,109,0.18); border-color: var(--snare);   color: var(--snare); }
-
-        .timer-display {
-            text-align: center;
-            padding: 28px 0 20px;
+        /* radial glow on selection */
+        .inst-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.22s;
         }
 
-        .timer-time {
-            font-size: 4.2rem;
+        .inst-btn[data-id="piano"]::before   { background: radial-gradient(circle at 25% 25%, rgba(123,140,222,0.25), transparent 65%); }
+        .inst-btn[data-id="marimba"]::before { background: radial-gradient(circle at 25% 25%, rgba(232,168,56, 0.25), transparent 65%); }
+        .inst-btn[data-id="drumset"]::before { background: radial-gradient(circle at 25% 25%, rgba(224,92,122, 0.25), transparent 65%); }
+        .inst-btn[data-id="snare"]::before   { background: radial-gradient(circle at 25% 25%, rgba(62,196,196, 0.25), transparent 65%); }
+
+        .inst-btn.selected::before { opacity: 1; }
+        .inst-btn[data-id="piano"].selected   { border-color: var(--piano);   }
+        .inst-btn[data-id="marimba"].selected { border-color: var(--marimba); }
+        .inst-btn[data-id="drumset"].selected { border-color: var(--drumset); }
+        .inst-btn[data-id="snare"].selected   { border-color: var(--snare);   }
+
+        .inst-icon { font-size: 1.8rem; display: block; margin-bottom: 8px; position: relative; }
+        .inst-name { font-size: 0.82rem; font-weight: 600; display: block; position: relative; }
+
+        /* ── Timer ──────────────────────────────── */
+        .timer-wrap {
+            display: flex;
+            justify-content: center;
+            padding: 4px 0 24px;
+        }
+
+        .timer-ring-wrap {
+            position: relative;
+            width: 210px;
+            height: 210px;
+        }
+
+        .timer-ring {
+            width: 210px;
+            height: 210px;
+            transform: rotate(-90deg);
+        }
+
+        .ring-track { fill: none; stroke: var(--s2); stroke-width: 5; }
+        .ring-fill  {
+            fill: none; stroke-width: 5; stroke-linecap: round;
+            stroke-dasharray: 565.5;
+            stroke-dashoffset: 565.5;
+            stroke: var(--piano);
+            transition: stroke-dashoffset 0.4s linear, stroke 0.3s;
+        }
+
+        .timer-inner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .timer-digits {
+            font-size: 2.5rem;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -2px;
+            letter-spacing: -1.5px;
             line-height: 1;
+            color: var(--text);
+            transition: color 0.3s;
         }
 
-        .timer-status { font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; min-height: 1.2em; }
+        .timer-status {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-align: center;
+        }
 
+        .rec-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+            animation: blink 1.1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.15; }
+        }
+
+        /* ── Buttons ────────────────────────────── */
         .btn {
             width: 100%;
             padding: 15px;
-            border-radius: var(--radius);
+            border-radius: var(--r);
             border: none;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.18s;
+            letter-spacing: 0.1px;
+            transition: transform 0.1s, opacity 0.15s;
         }
 
-        .btn-start  { background: var(--piano); color: white; }
-        .btn-stop   { background: var(--marimba); color: white; }
-        .btn-save   { background: rgba(78,205,196,0.15); color: var(--drumset); margin-top: 10px; }
-        .btn-discard { background: rgba(255,107,107,0.12); color: var(--marimba); margin-top: 8px; }
-        .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn:active   { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+        .btn-primary { background: var(--piano); color: #fff; }
+
+        .btn-save {
+            background: rgba(62,196,196,0.1);
+            color: var(--snare);
+            border: 1px solid rgba(62,196,196,0.18);
+            margin-top: 10px;
+        }
+
+        .btn-discard {
+            background: rgba(224,92,122,0.08);
+            color: var(--drumset);
+            border: 1px solid rgba(224,92,122,0.14);
+            margin-top: 8px;
+        }
+
+        /* ── Note input ─────────────────────────── */
         .note-input {
             width: 100%;
-            padding: 12px 14px;
-            border-radius: var(--radius);
-            border: 1px solid rgba(255,255,255,0.08);
-            background: var(--surface);
+            padding: 13px 15px;
+            border-radius: var(--r);
+            border: 1px solid var(--border);
+            background: var(--s1);
             color: var(--text);
-            font-size: 0.9rem;
+            font-size: 0.88rem;
+            font-family: inherit;
             margin-top: 12px;
             resize: none;
-            font-family: inherit;
+            transition: border-color 0.2s;
         }
 
-        .note-input:focus { outline: none; border-color: var(--piano); }
-        .note-input::placeholder { color: var(--text-muted); }
+        .note-input:focus       { outline: none; border-color: rgba(123,140,222,0.45); }
+        .note-input::placeholder { color: var(--faint); }
 
-        .date-header {
-            font-size: 0.72rem;
+        /* ── Log ────────────────────────────────── */
+        .date-label {
+            font-size: 0.68rem;
             font-weight: 600;
-            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 18px 0 8px;
+            letter-spacing: 0.7px;
+            color: var(--muted);
+            margin: 20px 0 8px;
         }
 
-        .date-header:first-child { margin-top: 0; }
+        .date-label:first-child { margin-top: 0; }
 
-        .sessions-list { display: flex; flex-direction: column; gap: 8px; }
+        .session-list { display: flex; flex-direction: column; gap: 7px; }
 
         .session-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 13px 14px;
+            background: var(--s1);
+            border-radius: var(--r-sm);
+            padding: 12px 14px;
             display: flex;
             align-items: center;
-            gap: 11px;
+            gap: 12px;
+            border: 1px solid var(--border);
         }
 
-        .session-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-
+        .session-bar { width: 3px; border-radius: 2px; align-self: stretch; min-height: 36px; flex-shrink: 0; }
         .session-info { flex: 1; min-width: 0; }
-        .session-name { font-size: 0.88rem; font-weight: 600; }
-        .session-time { font-size: 0.73rem; color: var(--text-muted); margin-top: 2px; }
-        .session-note { font-size: 0.73rem; color: var(--text-muted); margin-top: 2px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .session-name { font-size: 0.86rem; font-weight: 600; }
+        .session-time { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+        .session-note { font-size: 0.7rem; color: var(--muted); margin-top: 2px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .session-dur  { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .session-del  { background: none; border: none; color: var(--faint); cursor: pointer; font-size: 0.8rem; padding: 4px; flex-shrink: 0; transition: color 0.15s; }
+        .session-del:hover { color: var(--drumset); }
 
-        .session-dur { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-
-        .session-del {
-            background: none; border: none;
-            color: var(--text-muted); cursor: pointer;
-            font-size: 0.9rem; padding: 4px; flex-shrink: 0;
-            transition: color 0.15s;
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 45vh;
+            color: var(--muted);
+            text-align: center;
+            gap: 12px;
         }
-        .session-del:hover { color: var(--marimba); }
 
-        .empty-state { text-align: center; color: var(--text-muted); padding: 52px 24px; }
-        .empty-state .icon { font-size: 2.6rem; margin-bottom: 12px; }
-        .empty-state p { font-size: 0.88rem; line-height: 1.5; }
+        .empty-icon { font-size: 2.6rem; opacity: 0.4; }
+        .empty-text { font-size: 0.86rem; line-height: 1.65; }
 
-        .summary-grid {
+        /* ── Stats ──────────────────────────────── */
+        .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .summary-item {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 14px;
-        }
-
-        .summary-item .val {
-            font-size: 1.65rem;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .summary-item .lbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
-
-        .stat-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 16px;
-            margin-bottom: 10px;
-        }
-
-        .stat-card h3 {
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
             margin-bottom: 14px;
         }
 
-        .inst-stat { margin-bottom: 13px; }
-        .inst-stat:last-child { margin-bottom: 0; }
-
-        .inst-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
+        .stat-chip {
+            background: var(--s1);
+            border-radius: var(--r);
+            padding: 16px;
+            border: 1px solid var(--border);
         }
 
-        .inst-label { font-size: 0.84rem; font-weight: 500; }
-        .inst-value { font-size: 0.84rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .stat-val { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; line-height: 1; }
+        .stat-lbl { font-size: 0.69rem; color: var(--muted); margin-top: 6px; font-weight: 500; }
 
-        .bar-track { height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .stat-section {
+            background: var(--s1);
+            border-radius: var(--r);
+            padding: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+
+        .stat-section-title {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        .irow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+        .irow:last-child { margin-bottom: 0; }
+        .irow-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; }
+        .irow-body { flex: 1; min-width: 0; }
+        .irow-top  { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+        .irow-name { font-size: 0.8rem; font-weight: 500; color: var(--text); }
+        .irow-dur  { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+        .bar-track { height: 5px; background: var(--s2); border-radius: 3px; overflow: hidden; }
+        .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.55s cubic-bezier(0.34, 1.4, 0.64, 1); }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>Practice Tracker</h1>
-    <p id="header-sub">Ready to practice</p>
-</header>
-
-<div class="tabs">
-    <div class="tab active" data-page="timer" onclick="showPage('timer')">⏱ Timer</div>
-    <div class="tab" data-page="log"   onclick="showPage('log')">📋 Log</div>
-    <div class="tab" data-page="stats" onclick="showPage('stats')">📊 Stats</div>
-</div>
-
-<!-- TIMER -->
+<!-- ── TIMER ─────────────────────────────────────── -->
 <div id="page-timer" class="page active">
-    <p class="section-title">Instrument</p>
+    <div class="page-header">
+        <div class="page-title">Practice</div>
+        <div class="page-sub" id="page-sub">Ready to start</div>
+    </div>
+
+    <div class="section-label">Instrument</div>
     <div class="instruments">
-        <button class="instrument-btn" data-id="piano"   onclick="selectInstrument('piano')">
-            <span class="icon">🎹</span><span class="name">Piano</span>
+        <button class="inst-btn" data-id="piano"   onclick="selectInst('piano')">
+            <span class="inst-icon">🎹</span><span class="inst-name">Piano</span>
         </button>
-        <button class="instrument-btn" data-id="marimba" onclick="selectInstrument('marimba')">
-            <span class="icon">🎼</span><span class="name">Marimba</span>
+        <button class="inst-btn" data-id="marimba" onclick="selectInst('marimba')">
+            <span class="inst-icon">🎼</span><span class="inst-name">Marimba</span>
         </button>
-        <button class="instrument-btn" data-id="drumset" onclick="selectInstrument('drumset')">
-            <span class="icon">🥁</span><span class="name">Drumset</span>
+        <button class="inst-btn" data-id="drumset" onclick="selectInst('drumset')">
+            <span class="inst-icon">🥁</span><span class="inst-name">Drumset</span>
         </button>
-        <button class="instrument-btn" data-id="snare"   onclick="selectInstrument('snare')">
-            <span class="icon">🪘</span><span class="name">Marching Snare</span>
+        <button class="inst-btn" data-id="snare"   onclick="selectInst('snare')">
+            <span class="inst-icon">🪘</span><span class="inst-name">Marching Snare</span>
         </button>
     </div>
 
-    <div class="timer-display">
-        <div class="timer-time" id="timer-disp">00:00:00</div>
-        <div class="timer-status" id="timer-status">Select an instrument to begin</div>
+    <div class="timer-wrap">
+        <div class="timer-ring-wrap">
+            <svg class="timer-ring" viewBox="0 0 200 200">
+                <circle class="ring-track" cx="100" cy="100" r="90"/>
+                <circle class="ring-fill"  cx="100" cy="100" r="90" id="ring-fill"/>
+            </svg>
+            <div class="timer-inner">
+                <div class="timer-digits" id="timer-disp">00:00:00</div>
+                <div class="timer-status" id="timer-status">Select an instrument</div>
+            </div>
+        </div>
     </div>
 
-    <button class="btn btn-start" id="main-btn" onclick="toggleTimer()" disabled>Start</button>
+    <button class="btn btn-primary" id="main-btn" onclick="toggleTimer()" disabled>Start</button>
 
     <div id="save-area" style="display:none">
         <textarea class="note-input" id="note-input" rows="2"
-            placeholder="Optional note — e.g. Bach Invention No.1, hands separate"></textarea>
+            placeholder="Optional note — e.g. Bach Invention No. 1, hands separate"></textarea>
         <button class="btn btn-save"    onclick="saveSession()">Save Session</button>
         <button class="btn btn-discard" onclick="discardSession()">Discard</button>
     </div>
 </div>
 
-<!-- LOG -->
+<!-- ── LOG ───────────────────────────────────────── -->
 <div id="page-log" class="page">
+    <div class="page-header">
+        <div class="page-title">Log</div>
+        <div class="page-sub">Your session history</div>
+    </div>
     <div id="log-container"></div>
 </div>
 
-<!-- STATS -->
+<!-- ── STATS ─────────────────────────────────────── -->
 <div id="page-stats" class="page">
-    <div class="summary-grid">
-        <div class="summary-item"><div class="val" id="s-sessions">0</div><div class="lbl">Total Sessions</div></div>
-        <div class="summary-item"><div class="val" id="s-streak">0 🔥</div><div class="lbl">Day Streak</div></div>
-        <div class="summary-item"><div class="val" id="s-week">0m</div><div class="lbl">This Week</div></div>
-        <div class="summary-item"><div class="val" id="s-total">0h</div><div class="lbl">All Time</div></div>
+    <div class="page-header">
+        <div class="page-title">Stats</div>
+        <div class="page-sub">Your practice overview</div>
     </div>
-    <div class="stat-card">
-        <h3>All Time by Instrument</h3>
+
+    <div class="stat-grid">
+        <div class="stat-chip">
+            <div class="stat-val" id="s-sessions">0</div>
+            <div class="stat-lbl">Total Sessions</div>
+        </div>
+        <div class="stat-chip">
+            <div class="stat-val" id="s-streak" style="color:var(--marimba)">0 🔥</div>
+            <div class="stat-lbl">Day Streak</div>
+        </div>
+        <div class="stat-chip">
+            <div class="stat-val" id="s-week" style="color:var(--snare)">0m</div>
+            <div class="stat-lbl">This Week</div>
+        </div>
+        <div class="stat-chip">
+            <div class="stat-val" id="s-total" style="color:var(--piano)">0h</div>
+            <div class="stat-lbl">All Time</div>
+        </div>
+    </div>
+
+    <div class="stat-section">
+        <div class="stat-section-title">All Time by Instrument</div>
         <div id="bars-all"></div>
     </div>
-    <div class="stat-card">
-        <h3>This Week</h3>
+    <div class="stat-section">
+        <div class="stat-section-title">This Week</div>
         <div id="bars-week"></div>
     </div>
 </div>
 
+<!-- ── BOTTOM NAV ────────────────────────────────── -->
+<nav class="nav">
+    <div class="nav-item active" data-page="timer" onclick="showPage('timer')">
+        <div class="nav-icon">⏱</div>
+        <div class="nav-label">Timer</div>
+    </div>
+    <div class="nav-item" data-page="log" onclick="showPage('log')">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label">Log</div>
+    </div>
+    <div class="nav-item" data-page="stats" onclick="showPage('stats')">
+        <div class="nav-icon">📊</div>
+        <div class="nav-label">Stats</div>
+    </div>
+</nav>
+
 <script>
 const INST = {
-    piano:   { name: 'Piano',          icon: '🎹', color: '#6C63FF' },
-    marimba: { name: 'Marimba',        icon: '🎼', color: '#FF6B6B' },
-    drumset: { name: 'Drumset',        icon: '🥁', color: '#4ECDC4' },
-    snare:   { name: 'Marching Snare', icon: '🪘', color: '#FFE66D' },
+    piano:   { name: 'Piano',          icon: '🎹', color: '#7B8CDE' },
+    marimba: { name: 'Marimba',        icon: '🎼', color: '#E8A838' },
+    drumset: { name: 'Drumset',        icon: '🥁', color: '#E05C7A' },
+    snare:   { name: 'Marching Snare', icon: '🪘', color: '#3EC4C4' },
 };
 
+const CIRC = 2 * Math.PI * 90; // 565.49
+
 const store = {
-    get() { return JSON.parse(localStorage.getItem('pt_sessions') || '[]'); },
+    get()  { return JSON.parse(localStorage.getItem('pt_sessions') || '[]'); },
     set(s) { localStorage.setItem('pt_sessions', JSON.stringify(s)); },
 };
 
 let running = false, selected = null, startTs = null, elapsed = 0, ticker = null;
 
-function selectInstrument(id) {
+function selectInst(id) {
     if (running) return;
     selected = id;
-    document.querySelectorAll('.instrument-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.inst-btn').forEach(b => b.classList.remove('selected'));
     document.querySelector(`[data-id="${id}"]`).classList.add('selected');
-    document.getElementById('main-btn').disabled = false;
-    document.getElementById('timer-status').textContent = `Ready — ${INST[id].name}`;
-    document.getElementById('header-sub').textContent = INST[id].name + ' selected';
+    const btn = document.getElementById('main-btn');
+    btn.disabled = false;
+    btn.style.background = INST[id].color;
+    document.getElementById('ring-fill').style.stroke = INST[id].color;
+    document.getElementById('timer-status').textContent = INST[id].name + ' — ready';
+    document.getElementById('page-sub').textContent = INST[id].name + ' selected';
 }
 
 function toggleTimer() {
     if (!running) {
+        if (!selected) return;
         running = true;
         startTs = Date.now() - elapsed;
         ticker = setInterval(tick, 100);
         const btn = document.getElementById('main-btn');
         btn.textContent = 'Stop';
-        btn.className = 'btn btn-stop';
-        document.getElementById('timer-status').textContent = 'Recording…';
-        document.getElementById('header-sub').textContent = '● Live session';
-        document.querySelectorAll('.instrument-btn').forEach(b => b.disabled = true);
+        btn.style.background = '#E05C7A';
+        document.getElementById('timer-status').innerHTML =
+            `<span class="rec-dot" style="background:${INST[selected].color}"></span>Recording`;
+        document.getElementById('page-sub').textContent = '● Live session';
+        document.querySelectorAll('.inst-btn').forEach(b => b.disabled = true);
         document.getElementById('save-area').style.display = 'none';
     } else {
         running = false;
         clearInterval(ticker);
         document.getElementById('main-btn').style.display = 'none';
-        document.getElementById('timer-status').textContent = 'Session stopped — save or discard';
+        document.getElementById('timer-status').textContent = 'Stopped — save or discard';
         document.getElementById('save-area').style.display = 'block';
-        document.getElementById('header-sub').textContent = 'Session ready to save';
+        document.getElementById('page-sub').textContent = 'Session ready to save';
     }
 }
 
 function tick() {
     elapsed = Date.now() - startTs;
-    document.getElementById('timer-disp').textContent = fmt(elapsed);
+    const secs = Math.floor(elapsed / 1000);
+    document.getElementById('timer-disp').textContent = fmt(secs);
+    document.getElementById('timer-disp').style.color = INST[selected].color;
+    // ring completes one rotation every 30 minutes
+    const progress = (secs % 1800) / 1800;
+    document.getElementById('ring-fill').style.strokeDashoffset = CIRC * (1 - progress);
 }
 
-function fmt(ms) {
-    const s = Math.floor(ms / 1000);
-    return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(n => String(n).padStart(2,'0')).join(':');
+function fmt(s) {
+    return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
+        .map(n => String(n).padStart(2,'0')).join(':');
 }
 
 function fmtDur(s) {
@@ -390,10 +544,11 @@ function fmtDur(s) {
 function saveSession() {
     const dur = Math.floor(elapsed / 1000);
     if (dur < 5) { alert('Session too short to save.'); return; }
-    const sessions = store.get();
-    sessions.unshift({ id: Date.now(), instrument: selected, duration: dur,
-        note: document.getElementById('note-input').value.trim(), date: new Date().toISOString() });
-    store.set(sessions);
+    const ss = store.get();
+    ss.unshift({ id: Date.now(), instrument: selected, duration: dur,
+        note: document.getElementById('note-input').value.trim(),
+        date: new Date().toISOString() });
+    store.set(ss);
     reset();
     showPage('log');
 }
@@ -406,14 +561,17 @@ function reset() {
     running = false; elapsed = 0; selected = null;
     clearInterval(ticker);
     document.getElementById('timer-disp').textContent = '00:00:00';
-    document.getElementById('timer-status').textContent = 'Select an instrument to begin';
-    document.getElementById('header-sub').textContent = 'Ready to practice';
+    document.getElementById('timer-disp').style.color = '';
+    document.getElementById('timer-status').textContent = 'Select an instrument';
+    document.getElementById('page-sub').textContent = 'Ready to start';
+    document.getElementById('ring-fill').style.strokeDashoffset = CIRC;
+    document.getElementById('ring-fill').style.stroke = 'var(--piano)';
     const btn = document.getElementById('main-btn');
-    btn.textContent = 'Start'; btn.className = 'btn btn-start';
-    btn.style.display = ''; btn.disabled = true;
+    btn.textContent = 'Start'; btn.style.background = ''; btn.style.display = '';
+    btn.className = 'btn btn-primary'; btn.disabled = true;
     document.getElementById('save-area').style.display = 'none';
     document.getElementById('note-input').value = '';
-    document.querySelectorAll('.instrument-btn').forEach(b => { b.disabled = false; b.classList.remove('selected'); });
+    document.querySelectorAll('.inst-btn').forEach(b => { b.disabled = false; b.classList.remove('selected'); });
 }
 
 function deleteSession(id) {
@@ -426,19 +584,20 @@ function renderLog() {
     const sessions = store.get();
     const el = document.getElementById('log-container');
     if (!sessions.length) {
-        el.innerHTML = `<div class="empty-state"><div class="icon">🎵</div><p>No sessions yet.<br>Hit the timer and start practicing!</p></div>`;
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-text">No sessions yet.<br>Head to Timer and start practicing.</div></div>`;
         return;
     }
     const groups = {};
     sessions.forEach(s => {
-        const key = new Date(s.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+        const key = new Date(s.date).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
         (groups[key] = groups[key] || []).push(s);
     });
     el.innerHTML = Object.entries(groups).map(([date, ss]) =>
-        `<div class="date-header">${date}</div><div class="sessions-list">${ss.map(s => {
+        `<div class="date-label">${date}</div>
+         <div class="session-list">${ss.map(s => {
             const i = INST[s.instrument];
             return `<div class="session-card">
-                <div class="session-dot" style="background:${i.color}"></div>
+                <div class="session-bar" style="background:${i.color}"></div>
                 <div class="session-info">
                     <div class="session-name">${i.icon} ${i.name}</div>
                     <div class="session-time">${new Date(s.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
@@ -454,54 +613,57 @@ function renderLog() {
 function renderStats() {
     const sessions = store.get();
     const now = new Date();
-    const weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate()-now.getDay());
+    const weekStart = new Date(now);
+    weekStart.setHours(0,0,0,0);
+    weekStart.setDate(now.getDate() - now.getDay());
 
     const all = {}, week = {};
     Object.keys(INST).forEach(k => { all[k] = 0; week[k] = 0; });
     let totalSec = 0, weekSec = 0;
 
     sessions.forEach(s => {
-        all[s.instrument] += s.duration;
-        totalSec += s.duration;
+        all[s.instrument]  += s.duration; totalSec += s.duration;
         if (new Date(s.date) >= weekStart) { week[s.instrument] += s.duration; weekSec += s.duration; }
     });
 
     const days = new Set(sessions.map(s => new Date(s.date).toDateString()));
     let streak = 0;
     for (let i = 0; i < 365; i++) {
-        const d = new Date(now); d.setDate(now.getDate()-i);
+        const d = new Date(now); d.setDate(now.getDate() - i);
         if (days.has(d.toDateString())) streak++; else break;
     }
 
     document.getElementById('s-sessions').textContent = sessions.length;
-    document.getElementById('s-streak').textContent = streak + ' 🔥';
-    document.getElementById('s-week').textContent = Math.round(weekSec/60) + 'm';
-    document.getElementById('s-total').textContent = (totalSec/3600).toFixed(1) + 'h';
-
-    const maxAll = Math.max(...Object.values(all), 1);
-    const maxWeek = Math.max(...Object.values(week), 1);
+    document.getElementById('s-streak').textContent   = streak + ' 🔥';
+    document.getElementById('s-week').textContent     = Math.round(weekSec / 60) + 'm';
+    document.getElementById('s-total').textContent    = (totalSec / 3600).toFixed(1) + 'h';
 
     function bars(data, max) {
         return Object.entries(INST).map(([id, i]) => `
-            <div class="inst-stat">
-                <div class="inst-row">
-                    <span class="inst-label">${i.icon} ${i.name}</span>
-                    <span class="inst-value" style="color:${i.color}">${fmtDur(data[id])}</span>
+            <div class="irow">
+                <div class="irow-icon">${i.icon}</div>
+                <div class="irow-body">
+                    <div class="irow-top">
+                        <span class="irow-name">${i.name}</span>
+                        <span class="irow-dur" style="color:${i.color}">${fmtDur(data[id])}</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${max ? (data[id]/max*100).toFixed(1) : 0}%;background:${i.color}"></div>
+                    </div>
                 </div>
-                <div class="bar-track"><div class="bar-fill" style="width:${(data[id]/max*100).toFixed(1)}%;background:${i.color}"></div></div>
             </div>`).join('');
     }
 
-    document.getElementById('bars-all').innerHTML  = bars(all,  maxAll);
-    document.getElementById('bars-week').innerHTML = bars(week, maxWeek);
+    document.getElementById('bars-all').innerHTML  = bars(all,  Math.max(...Object.values(all),  1));
+    document.getElementById('bars-week').innerHTML = bars(week, Math.max(...Object.values(week), 1));
 }
 
 function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('page-'+name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
     document.querySelector(`[data-page="${name}"]`).classList.add('active');
-    if (name === 'log') renderLog();
+    if (name === 'log')   renderLog();
     if (name === 'stats') renderStats();
 }
 
