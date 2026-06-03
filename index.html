@@ -240,6 +240,61 @@
 
         .bar-track { height: 5px; background: var(--s2); border-radius: 3px; overflow: hidden; }
         .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.55s cubic-bezier(0.34,1.4,0.64,1); }
+
+        /* ── Manual Entry ────────────────────────── */
+        .manual-entry { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+        .manual-inst-row {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 8px; margin-bottom: 12px;
+        }
+
+        .manual-inst-btn {
+            position: relative; padding: 10px 6px;
+            border-radius: var(--r-sm); border: 1.5px solid var(--border);
+            background: var(--s1); color: var(--muted);
+            cursor: pointer; text-align: center;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            overflow: hidden; transition: border-color 0.18s, color 0.18s, transform 0.1s;
+        }
+        .manual-inst-btn:active { transform: scale(0.96); }
+        .manual-inst-btn::before {
+            content: ''; position: absolute; inset: 0;
+            border-radius: inherit; opacity: 0; transition: opacity 0.22s;
+        }
+        .manual-inst-btn[data-mid="piano"]::before   { background: radial-gradient(circle at 50% 50%, rgba(123,140,222,0.25), transparent 70%); }
+        .manual-inst-btn[data-mid="marimba"]::before { background: radial-gradient(circle at 50% 50%, rgba(232,168,56, 0.25), transparent 70%); }
+        .manual-inst-btn[data-mid="drumset"]::before { background: radial-gradient(circle at 50% 50%, rgba(224,92,122, 0.25), transparent 70%); }
+        .manual-inst-btn[data-mid="snare"]::before   { background: radial-gradient(circle at 50% 50%, rgba(62,196,196,  0.25), transparent 70%); }
+        .manual-inst-btn.selected::before { opacity: 1; }
+        .manual-inst-btn[data-mid="piano"].selected   { border-color: var(--piano);   color: var(--piano);   }
+        .manual-inst-btn[data-mid="marimba"].selected { border-color: var(--marimba); color: var(--marimba); }
+        .manual-inst-btn[data-mid="drumset"].selected { border-color: var(--drumset); color: var(--drumset); }
+        .manual-inst-btn[data-mid="snare"].selected   { border-color: var(--snare);   color: var(--snare);   }
+
+        .mini-icon { width: 24px; height: 24px; display: block; position: relative; }
+        .mini-icon svg { width: 100%; height: 100%; }
+        .mini-name { font-size: 0.6rem; font-weight: 600; position: relative; color: var(--text); }
+
+        .duration-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .duration-field {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--s1); border: 1px solid var(--border);
+            border-radius: var(--r); padding: 12px 16px;
+            transition: border-color 0.2s;
+        }
+        .duration-field:focus-within { border-color: rgba(123,140,222,0.45); }
+
+        .duration-input {
+            background: none; border: none; color: var(--text);
+            font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums;
+            width: 100%; outline: none; -moz-appearance: textfield; font-family: inherit;
+        }
+        .duration-input::-webkit-outer-spin-button,
+        .duration-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .duration-label { font-size: 0.8rem; color: var(--muted); font-weight: 500; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -291,6 +346,44 @@
             placeholder="Optional note — e.g. Bach Invention No. 1, hands separate"></textarea>
         <button class="btn btn-save"    onclick="saveSession()">Save Session</button>
         <button class="btn btn-discard" onclick="discardSession()">Discard</button>
+    </div>
+
+    <div class="manual-entry">
+        <div class="section-label">Log Past Session</div>
+        <div class="manual-inst-row">
+            <button class="manual-inst-btn" data-mid="piano"   onclick="selectManualInst('piano')">
+                <span class="mini-icon" id="mini-icon-piano"></span>
+                <span class="mini-name">Piano</span>
+            </button>
+            <button class="manual-inst-btn" data-mid="marimba" onclick="selectManualInst('marimba')">
+                <span class="mini-icon" id="mini-icon-marimba"></span>
+                <span class="mini-name">Marimba</span>
+            </button>
+            <button class="manual-inst-btn" data-mid="drumset" onclick="selectManualInst('drumset')">
+                <span class="mini-icon" id="mini-icon-drumset"></span>
+                <span class="mini-name">Drumset</span>
+            </button>
+            <button class="manual-inst-btn" data-mid="snare"   onclick="selectManualInst('snare')">
+                <span class="mini-icon" id="mini-icon-snare"></span>
+                <span class="mini-name">Snare</span>
+            </button>
+        </div>
+        <div class="duration-row">
+            <div class="duration-field">
+                <input type="number" id="manual-hours" class="duration-input"
+                    min="0" max="23" value="0" oninput="clampDuration(this,23)"/>
+                <span class="duration-label">hr</span>
+            </div>
+            <div class="duration-field">
+                <input type="number" id="manual-minutes" class="duration-input"
+                    min="0" max="59" value="0" oninput="clampDuration(this,59)"/>
+                <span class="duration-label">min</span>
+            </div>
+        </div>
+        <textarea class="note-input" id="manual-note" rows="2"
+            placeholder="Optional note — e.g. Ran through scales, 120 BPM"></textarea>
+        <button class="btn btn-primary" id="manual-add-btn" onclick="addManualSession()"
+            disabled style="margin-top:10px;">Add Session</button>
     </div>
 </div>
 
@@ -457,8 +550,10 @@ const store = {
 
 /* ── Inject icons on load ──────────────────────────────────────────── */
 Object.entries(INST).forEach(([id, i]) => {
-    const el = document.getElementById('card-icon-' + id);
-    if (el) el.innerHTML = i.icon;
+    const el   = document.getElementById('card-icon-' + id);
+    const mini = document.getElementById('mini-icon-' + id);
+    if (el)   el.innerHTML   = i.icon;
+    if (mini) mini.innerHTML = i.icon;
 });
 document.getElementById('nav-icon-timer').innerHTML = SVG.timer;
 document.getElementById('nav-icon-log').innerHTML   = SVG.log;
@@ -656,6 +751,47 @@ function showPage(name) {
     document.querySelector(`[data-page="${name}"]`).classList.add('active');
     if (name === 'log')   renderLog();
     if (name === 'stats') renderStats();
+}
+
+/* ── Manual entry ──────────────────────────────────────────────────── */
+let manualInst = null;
+
+function selectManualInst(id) {
+    manualInst = id;
+    document.querySelectorAll('.manual-inst-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelector(`[data-mid="${id}"]`).classList.add('selected');
+    const btn = document.getElementById('manual-add-btn');
+    btn.disabled = false;
+    btn.style.background = INST[id].color;
+}
+
+function clampDuration(el, max) {
+    const v = parseInt(el.value);
+    if (isNaN(v) || v < 0) el.value = 0;
+    else if (v > max) el.value = max;
+}
+
+function addManualSession() {
+    if (!manualInst) return;
+    const h   = parseInt(document.getElementById('manual-hours').value)   || 0;
+    const m   = parseInt(document.getElementById('manual-minutes').value) || 0;
+    const dur = h * 3600 + m * 60;
+    if (dur < 60) { alert('Please enter at least 1 minute.'); return; }
+    const ss = store.get();
+    ss.unshift({
+        id: Date.now(), instrument: manualInst, duration: dur,
+        note: document.getElementById('manual-note').value.trim(),
+        date: new Date().toISOString()
+    });
+    store.set(ss);
+    manualInst = null;
+    document.querySelectorAll('.manual-inst-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('manual-hours').value   = '0';
+    document.getElementById('manual-minutes').value = '0';
+    document.getElementById('manual-note').value    = '';
+    const btn = document.getElementById('manual-add-btn');
+    btn.disabled = true; btn.style.background = '';
+    showPage('log');
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
